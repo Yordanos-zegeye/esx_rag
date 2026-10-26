@@ -133,3 +133,73 @@ def retrieve(collection_name: str, query:str,n_results: int = 3) -> list[dict]:
         })
     return retrieved
 
+# Generation
+def generate_answer(query: str, context_chunks: list[dict]) -> str:
+    context_text = '\n\n'.join(f"[Source: {chunk['source']}]\n{chunk['text']}" for chunk in context_chunks)
+    system_prompt = f"You are a helpful assistant. Use the following context to answer the question. If the answer is not contained within the context, say 'I don't know'. Cite the sources of your information in your answer."
+    user_message = f"Context:\n{context_text}\n\nQuestion: {query}"
+
+    response = ollama_client.chat(
+        model = CHAT_MODEL,
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ],
+    )
+    return response.message.content
+
+# RAG Pipeline
+def ask(collection_name: str, query: str) ->None:
+    print(f"\nSearcihng '{collection_name}' for: {query}")
+    print("-" * 50)
+
+    chunks = retrieve(collection_name, query)
+
+    if not chunks:
+        print("No relevant documents found.")
+        return
+    answer = generate_answer(query, chunks)
+
+    print(f"\nAnswer:\n {answer}")
+    print("\nSources:")
+    for chunk in chunks:
+        print(f"- {chunk['source']} (distance: {chunk['distance']:.4f})")
+
+def list_collections() -> list[str]:
+    collections = chroma_client.list_collections()
+    return [col.name for col in collections]
+
+def main() -> None:
+    print("Personal RAG Agent")
+    print(f"Chat Model: {CHAT_MODEL}, Embedding Model: {EMBEDDING_MODEL}")
+    print()
+
+    while True:
+        print("\nOptions:")
+        print("[I]ngest a collection")
+        print("[A]sk a question")
+        print("[L]ist collections")
+        print("[E]xit")
+        choice = input("Enter your choice: ").strip().lower()
+
+        if choice == "i":
+            collection_name = input("Enter the collection name to ingest: ").strip()
+            ingest_collection(collection_name)
+        elif choice == "a":
+            collection_name = input("Enter the collection name to search: ").strip()
+            query = input("Enter your question: ").strip()
+            ask(collection_name, query)
+        elif choice == "l":
+            collections = list_collections()
+            print("Available Collections:")
+            for col in collections:
+                print(f"- {col}")
+        elif choice == "e":
+            print(" Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+if __name__ == "__main__":
+    main()
+    
