@@ -47,9 +47,14 @@ st.markdown(
         margin: 6px 0;
         border-radius: 4px;
         font-size: 0.9em;
+        color: #212529;
     }
     .source-box strong {
         color: #0056b3;
+    }
+    .source-box br {
+        display: block;
+        margin: 2px 0;
     }
     </style>
     """,
